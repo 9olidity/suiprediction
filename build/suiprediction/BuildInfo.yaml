@@ -1,0 +1,25 @@
+---
+compiled_package_info:
+  package_name: suiprediction
+  address_alias_instantiation:
+    std: "0000000000000000000000000000000000000000000000000000000000000001"
+    sui: "0000000000000000000000000000000000000000000000000000000000000002"
+    suiprediction: "0000000000000000000000000000000000000000000000000000000000000000"
+  source_digest: A774E0CA61E5FCE5DD2B908726F6F408D8EE07B432FB008B8C75A43B0AF2C879
+  build_flags:
+    dev_mode: true
+    test_mode: true
+    generate_docs: false
+    generate_abis: false
+    install_dir: ~
+    force_recompilation: false
+    lock_file: ~
+    additional_named_addresses: {}
+    fetch_deps_only: false
+    skip_fetch_latest_git_deps: false
+    default_flavor: ~
+    default_edition: ~
+    deps_as_root: false
+dependencies:
+  - MoveStdlib
+  - Sui

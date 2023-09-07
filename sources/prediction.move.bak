@@ -1,0 +1,198 @@
+module suiprediction::prediction {
+    use sui::balance::Balance;
+    use sui::sui::SUI;
+    use sui::object::UID;
+    use sui::tx_context;
+    use sui::transfer;
+    use sui::object;
+    use sui::balance;
+    #[test_only]
+    use sui::test_scenario;
+    use sui::coin::Coin;
+    use sui::coin;
+    use std::vector;
+
+    // let rounds: vector<Round> = vector[];
+    struct  Rounds has key {
+        id: UID,
+        round: vector<Round>
+    }
+
+    struct Round has key , store {
+        id: UID,
+        epoch: u32,
+        startTimestamp: u32,
+        lockTimestamp: u32,
+        closeTimestamp: u32,
+        lockPrice: u128,
+        closePrice: u128,
+        lockOracleId: u128,
+        closeOracleId: u128,
+        totalAmount: Balance<SUI>,
+        upAmount: Balance<SUI>,
+        downAmount: Balance<SUI>,
+        rewardBaseCalAmount: Balance<SUI>,
+        rewardAmount: Balance<SUI>,
+        oracleCalled: bool
+    }
+
+    struct BetInfo has store {
+        amount: u128,
+        claimed: bool
+    }
+    struct Epoch has key ,store {
+        id: UID,
+        currentEpoch: u32
+    }
+
+    fun init(ctx: &mut tx_context::TxContext) {
+        transfer::share_object(Round {
+            id: object::new(ctx),
+            epoch: 1,
+            startTimestamp: 1111,
+            lockTimestamp: 2222,
+            closeTimestamp: 3333,
+            lockPrice: 1,
+            closePrice: 1,
+            lockOracleId: 1,
+            closeOracleId: 1,
+            totalAmount: balance::zero<SUI>(),
+            upAmount: balance::zero<SUI>(),
+            downAmount: balance::zero<SUI>(),
+            rewardBaseCalAmount: balance::zero<SUI>(),
+            rewardAmount: balance::zero<SUI>(),
+            oracleCalled: false
+        });
+
+        transfer::share_object(Rounds {
+            id: object::new(ctx),
+            round: vector::empty()
+        });
+
+        transfer::share_object(Epoch {
+            id: object::new(ctx),
+            currentEpoch: 1
+        });
+    }
+
+
+
+    public fun betUp(
+        round: &mut Round,
+        epoch: &mut Epoch,
+        sui: Coin<SUI>,
+        ctx: &mut tx_context::TxContext
+    ) {
+        // assert!(round.epoch != epoch.currentEpoch,0);
+        let sui_balance = coin::into_balance(sui);
+        // balance::join(&mut round.totalAmount, sui_balance);
+        balance::join(&mut round.upAmount, sui_balance);
+    }
+
+    public fun betDown(
+        round: &mut Round,
+        epoch: &mut Epoch,
+        sui: Coin<SUI>,
+        ctx: &mut tx_context::TxContext
+    ) {
+        // assert!(round.epoch != epoch.currentEpoch,0);
+        let sui_balance = coin::into_balance(sui);
+        // balance::join(&mut round.totalAmount, sui_balance);
+        balance::join(&mut round.downAmount, sui_balance);
+    }
+
+
+    public fun exe(epoch: &mut Epoch) {
+        epoch.currentEpoch = epoch.currentEpoch + 1;
+    }
+
+    public entry fun getcurrent(epoch: &mut Epoch): u32 {
+        epoch.currentEpoch
+    }
+
+    public entry fun getupAmount(round: &mut Round): u64 {
+        balance::value(&round.upAmount)
+    }
+    public entry fun getdownAmount(round: &mut Round): u64 {
+        balance::value(&round.downAmount)
+    }
+
+    public entry fun gettotalAmount(round: &mut Round): u64 {
+        balance::value(&round.upAmount) + balance::value(&round.downAmount)
+    }
+    #[test]
+    fun testpaly() {
+        let owner = @0x99;
+        let user1 = @0x991;
+        let user2 = @0x992;
+
+        let scenario_val = test_scenario::begin(owner);
+        let scenario = &mut scenario_val;
+
+        test_scenario::next_tx(scenario,owner);
+        {
+            init(test_scenario::ctx(scenario))
+        };
+
+        test_scenario::next_tx(scenario,owner);
+        {
+            let epoch_val = test_scenario::take_shared<Epoch>(scenario);
+            let epoch = &mut epoch_val;
+            assert!(getcurrent(epoch) == 1,0); // frist epoch
+            test_scenario::return_shared(epoch_val);
+        };
+
+        // test betup
+        test_scenario::next_tx(scenario,user1);
+        {
+            let epoch_val = test_scenario::take_shared<Epoch>(scenario);
+            let epoch = &mut epoch_val;
+            let round_val = test_scenario::take_shared<Round>(scenario);
+            let round = &mut round_val;
+            let ctx = test_scenario::ctx(scenario);
+            betUp(
+                round,
+                epoch,
+                coin::mint_for_testing<SUI>(10, ctx),
+                ctx
+            );
+            assert!(getupAmount(round) == 10,0);
+            test_scenario::return_shared(round_val);
+            test_scenario::return_shared(epoch_val);
+        };
+        // test betDown
+        test_scenario::next_tx(scenario,user2);
+        {
+            let epoch_val = test_scenario::take_shared<Epoch>(scenario);
+            let epoch = &mut epoch_val;
+            let round_val = test_scenario::take_shared<Round>(scenario);
+            let round = &mut round_val;
+            let ctx = test_scenario::ctx(scenario);
+            betDown(
+                round,
+                epoch,
+                coin::mint_for_testing<SUI>(10, ctx),
+                ctx
+            );
+            assert!(getdownAmount(round) == 10,0);
+            assert!(gettotalAmount(round) == 20,0);// up + down = 20
+            test_scenario::return_shared(round_val);
+            test_scenario::return_shared(epoch_val);
+        };
+
+
+
+
+        // test epoch.currentEpoch + 1
+        // test_scenario::next_tx(scenario,owner);
+        // {
+        //     let epoch_val = test_scenario::take_shared<Epoch>(scenario);
+        //     let epoch = &mut epoch_val;
+        //     exe(epoch);
+        //     assert!(getcurrent(epoch) == 2,0); // second epoch
+        //     test_scenario::return_shared(epoch_val);
+        // };
+
+        test_scenario::end(scenario_val);
+    }
+}
