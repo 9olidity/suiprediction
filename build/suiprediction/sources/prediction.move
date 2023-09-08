@@ -57,7 +57,7 @@ module suiprediction::prediction {
 
 
 
-    public fun betUp(
+    public entry fun betUp(
         rounds: &mut Rounds,
         epoch: &mut Epoch,
         sui: Coin<SUI>,
@@ -78,7 +78,7 @@ module suiprediction::prediction {
         vector::push_back(&mut round.upaddress,tx_context::sender(ctx));
     }
 
-    public fun betDown(
+    public entry fun betDown(
         rounds: &mut Rounds,
         epoch: &mut Epoch,
         sui: Coin<SUI>,
@@ -96,8 +96,8 @@ module suiprediction::prediction {
         vector::push_back(&mut round.downaddress,tx_context::sender(ctx));
     }
 
-
-    public fun startplay(rounds: &mut Rounds,epoch: &mut Epoch) {
+    // #[test_only]
+    public entry fun startplay(rounds: &mut Rounds,epoch: &mut Epoch) {
         let firstround = Round {
             epoch: 1,
             startTimestamp: 1111,
@@ -210,6 +210,15 @@ module suiprediction::prediction {
         let round = vector::borrow(&mut rounds.rounds,playnum);
         balance::value(&round.totalAmount)
         // balance::value(&round.upAmount) + balance::value(&round.downAmount)
+    }
+
+    public entry fun getinfo(rounds: &mut Rounds,roundnum: u64): (
+        u32, // epoch
+        u64, // upAmount balance
+        u64 // downAmount balance
+    ) {
+        let round = vector::borrow(&mut rounds.rounds,roundnum);
+        (round.epoch,round.upAmount,round.downAmount)
     }
 
     #[test_only]
