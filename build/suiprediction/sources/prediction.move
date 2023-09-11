@@ -17,8 +17,8 @@ module suiprediction::prediction {
 
     struct Round has  store {
         epoch: u32,
-        lockTimestamp: u32,
-        closeTimestamp: u32,
+        lockTimestamp: u64,
+        closeTimestamp: u64,
         lockPrice: u128,
         closePrice: u128,
         totalAmount: Balance<SUI>,
@@ -99,7 +99,7 @@ module suiprediction::prediction {
     public entry fun startplay(rounds: &mut Rounds,epoch: &mut Epoch,clock: &Clock,ctx: &mut TxContext) {
         let firstround = Round {
             epoch: 0,
-            lockTimestamp: (clock::timestamp_ms(clock) as u32),
+            lockTimestamp: clock::timestamp_ms(clock),
             closeTimestamp: 3333,
             lockPrice: 0,
             closePrice: 1,
@@ -133,7 +133,7 @@ module suiprediction::prediction {
         assert!(value > 0,0);
 
         round.closePrice = value;
-        round.closeTimestamp = (clock::timestamp_ms(clock) as u32);
+        round.closeTimestamp = clock::timestamp_ms(clock);
 
         // up wins
         if(round.closePrice > round.lockPrice) {
@@ -150,7 +150,7 @@ module suiprediction::prediction {
         };
         let nextround = Round {
             epoch: (epoch.currentEpoch + 1 as u32),
-            lockTimestamp: (clock::timestamp_ms(clock) as u32),
+            lockTimestamp: clock::timestamp_ms(clock),
             closeTimestamp: 0,
             lockPrice: value,
             closePrice: 0,
@@ -392,6 +392,6 @@ module suiprediction::prediction {
 }
 
 
-//   - ID: 0x21d68b314dc7ac0204fca16c2c0dd19538b2304976d4dec6880ee8fc65d5b8ce ,  rounds
-//   - ID: 0x9b82c157fc3959d75c8a6beed9caf19c8fae3bffa1ad2b8d858315cb4556697c ,  Immutable
-//   - ID: 0xbe3200d74f26392eb5ae78e7ba9eec3a2b5c4f50ae7b20881f873ded140f36fb ,  epoch
+//   - ID: 0xba419ca9aba94a72b9cf0143521030bd8ef31195acd6999fd06510135aa2bb5f ,  rounds
+//   - ID: 0x33c599c47b98268461d4015e53e2bf9b7a05ac024f718ccf0e1e89b1e3d0c5f7 ,  Immutable
+//   - ID: 0x40ac7f56ee993c0bec31e8155e33d0d44583bf54c552e517f0fb4968f5248848 ,  epoch
