@@ -114,7 +114,7 @@ module suiprediction::prediction {
             upordown: false
         };
         vector::push_back(&mut rounds.rounds,firstround);
-        epoch.currentEpoch = epoch.currentEpoch + 1;
+        // epoch.currentEpoch = epoch.currentEpoch + 1;
     }
 
     public entry fun executeRound(
@@ -395,3 +395,8 @@ module suiprediction::prediction {
 //   - ID: 0xe88e990f1735dfdc241dbb317d871922daa9f78e42d264cbe1ec9aa4793ccd7c ,  rounds
 //   - ID: 0xfd4c3da227b886abba9ddbf82eef2d72f248f0f1c8b572d3d735dfc51fb1ece8 ,  Immutable
 //   - ID: 0xad3b80dae522ed6cc545f8548b72bc5569551856c4d93fbd222a0c9f20acdf10 ,  epoch
+
+// 0.24
+// up 0.05 down 0.1
+// up 0.1
+
