@@ -1,5 +1,6 @@
 module suiprediction::prediction {
     use SupraOracle::SupraSValueFeed::{get_price, get_prices, extract_price, OracleHolder};
+    use sui::clock::{Self, Clock};
     use sui::balance::Balance;
     use sui::sui::SUI;
     use sui::object::UID;
@@ -16,13 +17,10 @@ module suiprediction::prediction {
 
     struct Round has  store {
         epoch: u32,
-        startTimestamp: u32,
         lockTimestamp: u32,
         closeTimestamp: u32,
         lockPrice: u128,
         closePrice: u128,
-        lockOracleId: u128,
-        closeOracleId: u128,
         totalAmount: Balance<SUI>,
         upAmount: u64, // balance
         downAmount: u64,
@@ -102,16 +100,13 @@ module suiprediction::prediction {
     }
 
     // #[test_only]
-    public entry fun startplay(rounds: &mut Rounds,epoch: &mut Epoch,ctx: &mut TxContext) {
+    public entry fun startplay(rounds: &mut Rounds,epoch: &mut Epoch,clock: &Clock,ctx: &mut TxContext) {
         let firstround = Round {
-            epoch: 1,
-            startTimestamp: 1111,
-            lockTimestamp: 2222,
+            epoch: 0,
+            lockTimestamp: (clock::timestamp_ms(clock) as u32),
             closeTimestamp: 3333,
             lockPrice: 0,
             closePrice: 1,
-            lockOracleId: 1,
-            closeOracleId: 1,
             totalAmount: balance::zero<SUI>(),
             upAmount: 0,
             downAmount: 0,
@@ -133,6 +128,7 @@ module suiprediction::prediction {
         playnum: u64,
         epoch: &mut Epoch,
         oracle_holder: &OracleHolder, // 0xaa0315f0748c1f24ddb2b45f7939cff40f7a8104af5ccbc4a1d32f870c0b4105,
+        clock: &Clock,
         ctx: &mut TxContext
     ) {
         let round = vector::borrow_mut(&mut rounds.rounds,playnum);
@@ -143,6 +139,7 @@ module suiprediction::prediction {
         assert!(value > 0,0);
 
         round.closePrice = value;
+        round.closeTimestamp = (clock::timestamp_ms(clock) as u32);
 
         // up wins
         if(round.closePrice > round.lockPrice) {
@@ -159,13 +156,10 @@ module suiprediction::prediction {
         };
         let nextround = Round {
             epoch: (epoch.currentEpoch + 1 as u32),
-            startTimestamp: 1111,
-            lockTimestamp: 2222,
-            closeTimestamp: 3333,
+            lockTimestamp: (clock::timestamp_ms(clock) as u32),
+            closeTimestamp: 0,
             lockPrice: value,
-            closePrice: 1,
-            lockOracleId: 1,
-            closeOracleId: 1,
+            closePrice: 0,
             totalAmount: balance::zero<SUI>(),
             upAmount: 0,
             downAmount: 0,
@@ -413,3 +407,8 @@ module suiprediction::prediction {
         test_scenario::end(scenario_val);
     }
 }
+
+
+//   - ID: 0x21d68b314dc7ac0204fca16c2c0dd19538b2304976d4dec6880ee8fc65d5b8ce ,  rounds
+//   - ID: 0x9b82c157fc3959d75c8a6beed9caf19c8fae3bffa1ad2b8d858315cb4556697c ,  Immutable
+//   - ID: 0xbe3200d74f26392eb5ae78e7ba9eec3a2b5c4f50ae7b20881f873ded140f36fb ,  epoch
