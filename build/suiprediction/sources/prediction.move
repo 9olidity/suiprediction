@@ -191,23 +191,39 @@ module suiprediction::prediction {
         let round = vector::borrow_mut(&mut rounds.rounds,playnum);
         // assert!(epoch.currentEpoch == playnum,0);
         assert!(round.oracleCalled,0);//
-        if(round.uprodown) {
+        if(round.uprodown) {// up wins
             let to = &mut round.totalAmount;
-            // let reward = balance::value(to) / vector::length(&round.upaddress);
-            let reward = balance::value(to) / round.upamount;
+            let userinput = *table::borrow(&round.upaddress,tx_context::sender(ctx));
+            let reward = ((userinput / round.upamount) * round.downamount) + userinput;
             let rewardcoin = coin::take(to, reward, ctx);
             transfer::public_transfer(rewardcoin, tx_context::sender(ctx));
-            debug::print(&reward);
+            // debug::print(&reward);
             // debug::print(&vector::length(&round.upaddress));
             // let (success,i) = vector::index_of(&round.upaddress,&tx_context::sender(ctx));
             // if(success){
-                // vector::remove(&mut round.upaddress,i);
+            // vector::remove(&mut round.upaddress,i);
             // };
-            let success = table::contains<address,u64>(&round.upaddress,tx_context::sender(ctx));
-            if(success) {
+            let success = table::contains<address, u64>(&round.upaddress,tx_context::sender(ctx));
+            if (success) {
                 table::remove(&mut round.upaddress,tx_context::sender(ctx));
             }
             // debug::print(&vector::length(&round.upaddress));
+        }else{
+            let to = &mut round.totalAmount;
+            let userinput = *table::borrow(&round.downaddress,tx_context::sender(ctx));
+            let reward = ((userinput / round.downamount) * round.upamount) + userinput;
+            let rewardcoin = coin::take(to, reward, ctx);
+            transfer::public_transfer(rewardcoin, tx_context::sender(ctx));
+            // debug::print(&reward);
+            // debug::print(&vector::length(&round.upaddress));
+            // let (success,i) = vector::index_of(&round.upaddress,&tx_context::sender(ctx));
+            // if(success){
+            // vector::remove(&mut round.upaddress,i);
+            // };
+            let success = table::contains<address, u64>(&round.downaddress,tx_context::sender(ctx));
+            if (success) {
+                table::remove(&mut round.downaddress,tx_context::sender(ctx));
+            }
         }
     }
     // public entry fun getcurrent(epoch: &mut Epoch): u32 {
@@ -228,6 +244,18 @@ module suiprediction::prediction {
         balance::value(&round.totalAmount)
         // balance::value(&round.upAmount) + balance::value(&round.downAmount)
     }
+
+    // public entry fun adminwithdraw(
+    //     rounds: &mut Rounds,
+    //     playnum: u64,
+    //     ctx: &mut TxContext
+    // ) {
+    //     let round = vector::borrow_mut(&mut rounds.rounds,playnum);
+    //     let to = &mut round.totalAmount;
+    //     let reward = balance::value(&mut round.totalAmount);
+    //     let rewardcoin = coin::take(to, reward, ctx);
+    //     transfer::public_transfer(rewardcoin, tx_context::sender(ctx));
+    // }
 
     public entry fun getinfo(rounds: &mut Rounds,roundnum: u64): (
         u32, // epoch
