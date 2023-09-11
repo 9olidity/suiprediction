@@ -1,5 +1,5 @@
 module suiprediction::prediction {
-    use SupraOracle::SupraSValueFeed::{get_price, get_prices, extract_price, OracleHolder};
+    use SupraOracle::SupraSValueFeed::{get_price, OracleHolder};
     use sui::clock::{Self, Clock};
     use sui::balance::Balance;
     use sui::sui::SUI;
@@ -24,16 +24,12 @@ module suiprediction::prediction {
         totalAmount: Balance<SUI>,
         upAmount: u64, // balance
         downAmount: u64,
-        // upaddress: vector<address>,
         upaddress: Table<address,u64>,
         downaddress: Table<address,u64>,
-        // downaddress: vector<address>,
         upamount: u64, // user number
         downamount: u64,
-        rewardBaseCalAmount: Balance<SUI>,
-        rewardAmount: Balance<SUI>,
         oracleCalled: bool,
-        uprodown: bool
+        upordown: bool
     }
 
     struct BetInfo has store {
@@ -114,10 +110,8 @@ module suiprediction::prediction {
             downaddress: table::new<address,u64>(ctx),
             upamount: 0,
             downamount: 0,
-            rewardBaseCalAmount: balance::zero<SUI>(),
-            rewardAmount: balance::zero<SUI>(),
             oracleCalled: false,
-            uprodown: false
+            upordown: false
         };
         vector::push_back(&mut rounds.rounds,firstround);
         epoch.currentEpoch = epoch.currentEpoch + 1;
@@ -146,13 +140,13 @@ module suiprediction::prediction {
             // let rewardAmount =  balance::value(&round.upAmount) + balance::value(&round.downAmount);
             // coin::take(&mut round.totalAmount, 1, ctx)
             round.oracleCalled = true;
-            round.uprodown = true;
+            round.upordown = true;
 
         };
         // down wins
         if(round.closePrice < round.lockPrice) {
             round.oracleCalled = true;
-            round.uprodown = false;
+            round.upordown = false;
         };
         let nextround = Round {
             epoch: (epoch.currentEpoch + 1 as u32),
@@ -167,10 +161,8 @@ module suiprediction::prediction {
             downaddress: table::new<address,u64>(ctx),
             upamount: 0,
             downamount: 0,
-            rewardBaseCalAmount: balance::zero<SUI>(),
-            rewardAmount: balance::zero<SUI>(),
             oracleCalled: false,
-            uprodown: false
+            upordown: false
         };
         vector::push_back(&mut rounds.rounds,nextround);
         epoch.currentEpoch = epoch.currentEpoch + 1;
@@ -185,7 +177,7 @@ module suiprediction::prediction {
         let round = vector::borrow_mut(&mut rounds.rounds,playnum);
         // assert!(epoch.currentEpoch == playnum,0);
         assert!(round.oracleCalled,0);//
-        if(round.uprodown) {// up wins
+        if(round.upordown) {// up wins
             let to = &mut round.totalAmount;
             let userinput = *table::borrow(&round.upaddress,tx_context::sender(ctx));
             let reward = ((userinput / round.upamount) * round.downamount) + userinput;
@@ -251,15 +243,6 @@ module suiprediction::prediction {
     //     transfer::public_transfer(rewardcoin, tx_context::sender(ctx));
     // }
 
-    public entry fun getinfo(rounds: &mut Rounds,roundnum: u64): (
-        u32, // epoch
-        u64, // upAmount balance
-        u64, // downAmount balance
-        u128 // closePrice
-    ) {
-        let round = vector::borrow(&mut rounds.rounds,roundnum);
-        (round.epoch,round.upAmount,round.downAmount,round.closePrice)
-    }
 
     #[test_only]
     use sui::test_scenario;
