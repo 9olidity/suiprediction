@@ -2,11 +2,11 @@
 
 [move]
 version = 0
-manifest_digest = "8BA15A44527F75FEC0E8E76461BDB92D80D156DDAE20FA424EBE927FC3587881"
-deps_digest = "8B1E8E662E81AB200980CE643428AFA7EA5F9A87F7B36FA334F8BB7CCAD6EB2D"
+manifest_digest = "6FCBF84A6A2E8DB8027835271C896B9E81C8CF1B621A20B30B95BDA09A1C8A8D"
 
 dependencies = [
   { name = "Sui" },
+  { name = "SupraOracle" },
 ]
 
 [[move.package]]
@@ -19,4 +19,12 @@ source = { local = "..\\..\\..\\crates\\sui-framework\\packages\\sui-framework" 
 
 dependencies = [
   { name = "MoveStdlib" },
+]
+
+[[move.package]]
+name = "SupraOracle"
+source = { local = "..\\supra-svalue-feed-framework" }
+
+dependencies = [
+  { name = "Sui" },
 ]

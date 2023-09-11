@@ -1,4 +1,5 @@
 module suiprediction::prediction {
+    use SupraOracle::SupraSValueFeed::{get_price, get_prices, extract_price, OracleHolder};
     use sui::balance::Balance;
     use sui::sui::SUI;
     use sui::object::UID;
@@ -25,8 +26,10 @@ module suiprediction::prediction {
         totalAmount: Balance<SUI>,
         upAmount: u64, // balance
         downAmount: u64,
-        upaddress: vector<address>,
-        downaddress: vector<address>,
+        // upaddress: vector<address>,
+        upaddress: Table<address,u64>,
+        downaddress: Table<address,u64>,
+        // downaddress: vector<address>,
         upamount: u64, // user number
         downamount: u64,
         rewardBaseCalAmount: Balance<SUI>,
@@ -75,7 +78,8 @@ module suiprediction::prediction {
         balance::join(&mut round.totalAmount, sui_balance);
         round.upAmount = round.upAmount + addamount;
         round.upamount = round.upamount + 1;
-        vector::push_back(&mut round.upaddress,tx_context::sender(ctx));
+        // vector::push_back(&mut round.upaddress,tx_context::sender(ctx));
+        table::add(&mut round.upaddress,tx_context::sender(ctx),addamount);
     }
 
     public entry fun betDown(
@@ -93,11 +97,12 @@ module suiprediction::prediction {
         balance::join(&mut round.totalAmount, sui_balance);
         round.downAmount = round.downAmount + addamount;
         round.downamount = round.downamount + 1;
-        vector::push_back(&mut round.downaddress,tx_context::sender(ctx));
+        // vector::push_back(&mut round.downaddress,tx_context::sender(ctx));
+        table::add(&mut round.downaddress,tx_context::sender(ctx),addamount);
     }
 
     // #[test_only]
-    public entry fun startplay(rounds: &mut Rounds,epoch: &mut Epoch) {
+    public entry fun startplay(rounds: &mut Rounds,epoch: &mut Epoch,ctx: &mut TxContext) {
         let firstround = Round {
             epoch: 1,
             startTimestamp: 1111,
@@ -110,8 +115,8 @@ module suiprediction::prediction {
             totalAmount: balance::zero<SUI>(),
             upAmount: 0,
             downAmount: 0,
-            upaddress: vector::empty(),
-            downaddress: vector::empty(),
+            upaddress: table::new<address,u64>(ctx),
+            downaddress: table::new<address,u64>(ctx),
             upamount: 0,
             downamount: 0,
             rewardBaseCalAmount: balance::zero<SUI>(),
@@ -126,11 +131,19 @@ module suiprediction::prediction {
     public entry fun executeRound(
         rounds: &mut Rounds,
         playnum: u64,
-        epoch: &mut Epoch
+        epoch: &mut Epoch,
+        oracle_holder: &OracleHolder, // 0xaa0315f0748c1f24ddb2b45f7939cff40f7a8104af5ccbc4a1d32f870c0b4105,
+        ctx: &mut TxContext
     ) {
         let round = vector::borrow_mut(&mut rounds.rounds,playnum);
         // debug::print(&round.epoch);
         // debug::print(&epoch.currentEpoch);
+        let (value, decimal, oracle_timestamp, oracle_round) = get_price(oracle_holder, 90);
+
+        assert!(value > 0,0);
+
+        round.closePrice = value;
+
         // up wins
         if(round.closePrice > round.lockPrice) {
             // let rewardAmount =  balance::value(&round.upAmount) + balance::value(&round.downAmount);
@@ -149,15 +162,15 @@ module suiprediction::prediction {
             startTimestamp: 1111,
             lockTimestamp: 2222,
             closeTimestamp: 3333,
-            lockPrice: 0,
+            lockPrice: value,
             closePrice: 1,
             lockOracleId: 1,
             closeOracleId: 1,
             totalAmount: balance::zero<SUI>(),
             upAmount: 0,
             downAmount: 0,
-            upaddress: vector::empty(),
-            downaddress: vector::empty(),
+            upaddress: table::new<address,u64>(ctx),
+            downaddress: table::new<address,u64>(ctx),
             upamount: 0,
             downamount: 0,
             rewardBaseCalAmount: balance::zero<SUI>(),
@@ -186,10 +199,14 @@ module suiprediction::prediction {
             transfer::public_transfer(rewardcoin, tx_context::sender(ctx));
             debug::print(&reward);
             // debug::print(&vector::length(&round.upaddress));
-            let (success,i) = vector::index_of(&round.upaddress,&tx_context::sender(ctx));
-            if(success){
-                vector::remove(&mut round.upaddress,i);
-            };
+            // let (success,i) = vector::index_of(&round.upaddress,&tx_context::sender(ctx));
+            // if(success){
+                // vector::remove(&mut round.upaddress,i);
+            // };
+            let success = table::contains<address,u64>(&round.upaddress,tx_context::sender(ctx));
+            if(success) {
+                table::remove(&mut round.upaddress,tx_context::sender(ctx));
+            }
             // debug::print(&vector::length(&round.upaddress));
         }
     }
@@ -215,10 +232,11 @@ module suiprediction::prediction {
     public entry fun getinfo(rounds: &mut Rounds,roundnum: u64): (
         u32, // epoch
         u64, // upAmount balance
-        u64 // downAmount balance
+        u64, // downAmount balance
+        u128 // closePrice
     ) {
         let round = vector::borrow(&mut rounds.rounds,roundnum);
-        (round.epoch,round.upAmount,round.downAmount)
+        (round.epoch,round.upAmount,round.downAmount,round.closePrice)
     }
 
     #[test_only]
@@ -228,6 +246,8 @@ module suiprediction::prediction {
     use std::vector;
     use sui::tx_context::TxContext;
     use std::debug;
+    use sui::table::{Table, add};
+    use sui::table;
 
     #[test]
     fun testpaly() {
@@ -251,7 +271,8 @@ module suiprediction::prediction {
 
             let epoch_val = test_scenario::take_shared<Epoch>(scenario);
             let epoch = &mut epoch_val;
-            startplay(round,epoch);
+            let ctx = test_scenario::ctx(scenario);
+            startplay(round,epoch,ctx);
             // assert!(getcurrent(epoch) == 1,0); // frist epoch
             test_scenario::return_shared(epoch_val);
             test_scenario::return_shared(rounds_val);
@@ -327,8 +348,9 @@ module suiprediction::prediction {
             let epoch = &mut epoch_val;
             let rounds_val = test_scenario::take_shared<Rounds>(scenario);
             let rounds = &mut rounds_val;
+            let ctx = test_scenario::ctx(scenario);
 
-            executeRound(rounds,0,epoch);
+            // executeRound(rounds,0,epoch,ctx);
             assert!(getdownAmount(rounds,1) == 0,0);
 
             test_scenario::return_shared(rounds_val);

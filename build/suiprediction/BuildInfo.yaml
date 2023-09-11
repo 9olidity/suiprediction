@@ -2,24 +2,26 @@
 compiled_package_info:
   package_name: suiprediction
   address_alias_instantiation:
+    SupraOracle: 5d8fbbf6f908a4af8c6d072669a462d53e03eb3c1d863bd0359dc818c69ea706
     std: "0000000000000000000000000000000000000000000000000000000000000001"
     sui: "0000000000000000000000000000000000000000000000000000000000000002"
     suiprediction: "0000000000000000000000000000000000000000000000000000000000000000"
-  source_digest: 2CF4B5DBE1F3F4E9AFC5E0CAC91CF8BB384C50AFB251CD71C4C2C1A0F4DD0B43
+  source_digest: DA7A674B4AA93D458D1CD4B7C2B124BA3E8F97F6C209B6EE78C9BDD4F4C64792
   build_flags:
-    dev_mode: false
-    test_mode: false
+    dev_mode: true
+    test_mode: true
     generate_docs: false
     generate_abis: false
     install_dir: ~
     force_recompilation: false
-    lock_file: ".\\Move.lock"
+    lock_file: ~
     additional_named_addresses: {}
     fetch_deps_only: false
     skip_fetch_latest_git_deps: false
-    default_flavor: sui
+    default_flavor: ~
     default_edition: ~
     deps_as_root: false
 dependencies:
   - MoveStdlib
   - Sui
+  - SupraOracle
