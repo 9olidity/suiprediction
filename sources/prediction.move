@@ -16,7 +16,7 @@ module suiprediction::prediction {
     }
 
     struct Round has  store {
-        epoch: u32,
+        epoch: u64,
         lockTimestamp: u64,
         closeTimestamp: u64,
         lockPrice: u128,
@@ -61,10 +61,9 @@ module suiprediction::prediction {
         playnum: u64,
         ctx: &mut tx_context::TxContext
     ) {
-        // let round = vector::borrow_mut(&mut rounds.rounds,playnum);
-        // debug::print(&round.epoch);
-        // debug::print(&epoch.currentEpoch);
-        // assert!(round.epoch != epoch.currentEpoch,0);
+        let round = vector::borrow_mut(&mut rounds.rounds,playnum);
+        assert!(playnum == epoch.currentEpoch + 1,0);
+        assert!(round.epoch == epoch.currentEpoch + 1,0); // You can only bet on the next round
         let addamount = coin::value(&sui);
         let sui_balance = coin::into_balance(sui);
         // balance::join(&mut round.totalAmount, sui_balance);
@@ -84,6 +83,9 @@ module suiprediction::prediction {
         ctx: &mut tx_context::TxContext
     ) {
         // assert!(round.epoch != epoch.currentEpoch,0);
+        let round = vector::borrow_mut(&mut rounds.rounds,playnum);
+        assert!(playnum == epoch.currentEpoch + 1,0);
+        assert!(round.epoch == epoch.currentEpoch + 1,0);// You can only bet on the next round
         let addamount = coin::value(&sui);
         let sui_balance = coin::into_balance(sui);
         // balance::join(&mut round.totalAmount, sui_balance);
@@ -100,7 +102,26 @@ module suiprediction::prediction {
         let firstround = Round {
             epoch: 0,
             lockTimestamp: clock::timestamp_ms(clock),
-            closeTimestamp: 3333,
+            closeTimestamp: clock::timestamp_ms(clock),
+            lockPrice: 0,
+            closePrice: 0,
+            totalAmount: balance::zero<SUI>(),
+            upAmount: 0,
+            downAmount: 0,
+            upaddress: table::new<address,u64>(ctx),
+            downaddress: table::new<address,u64>(ctx),
+            upamount: 0,
+            downamount: 0,
+            oracleCalled: false,
+            upordown: false
+        };
+        vector::push_back(&mut rounds.rounds,firstround);
+        // epoch.currentEpoch = epoch.currentEpoch + 1; //
+
+        let secondround = Round {
+            epoch: 1,
+            lockTimestamp: clock::timestamp_ms(clock),
+            closeTimestamp: 0,
             lockPrice: 0,
             closePrice: 1,
             totalAmount: balance::zero<SUI>(),
@@ -113,19 +134,22 @@ module suiprediction::prediction {
             oracleCalled: false,
             upordown: false
         };
-        vector::push_back(&mut rounds.rounds,firstround);
+        vector::push_back(&mut rounds.rounds,secondround);
         // epoch.currentEpoch = epoch.currentEpoch + 1;
+
+
     }
 
     public entry fun executeRound(
         rounds: &mut Rounds,
-        playnum: u64,
+        currentEpoch: u64,
         epoch: &mut Epoch,
         oracle_holder: &OracleHolder, // 0xaa0315f0748c1f24ddb2b45f7939cff40f7a8104af5ccbc4a1d32f870c0b4105,
         clock: &Clock,
         ctx: &mut TxContext
     ) {
-        let round = vector::borrow_mut(&mut rounds.rounds,playnum);
+        assert!(currentEpoch == epoch.currentEpoch,0);
+        let round = vector::borrow_mut(&mut rounds.rounds,currentEpoch);
         // debug::print(&round.epoch);
         // debug::print(&epoch.currentEpoch);
         let (value, decimal, oracle_timestamp, oracle_round) = get_price(oracle_holder, 90);
@@ -134,6 +158,8 @@ module suiprediction::prediction {
 
         round.closePrice = value;
         round.closeTimestamp = clock::timestamp_ms(clock);
+
+
 
         // up wins
         if(round.closePrice > round.lockPrice) {
@@ -149,10 +175,10 @@ module suiprediction::prediction {
             round.upordown = false;
         };
         let nextround = Round {
-            epoch: (epoch.currentEpoch + 1 as u32),
-            lockTimestamp: clock::timestamp_ms(clock),
+            epoch: epoch.currentEpoch + 2,
+            lockTimestamp: 0,
             closeTimestamp: 0,
-            lockPrice: value,
+            lockPrice: 0,
             closePrice: 0,
             totalAmount: balance::zero<SUI>(),
             upAmount: 0,
@@ -165,6 +191,12 @@ module suiprediction::prediction {
             upordown: false
         };
         vector::push_back(&mut rounds.rounds,nextround);
+
+        let round2 = vector::borrow_mut(&mut rounds.rounds,currentEpoch + 1 );
+        round2.lockPrice = value;
+        round2.lockTimestamp = clock::timestamp_ms(clock);
+
+
         epoch.currentEpoch = epoch.currentEpoch + 1;
     }
 
@@ -277,7 +309,7 @@ module suiprediction::prediction {
             let epoch_val = test_scenario::take_shared<Epoch>(scenario);
             let epoch = &mut epoch_val;
             let ctx = test_scenario::ctx(scenario);
-            startplay(round,epoch,ctx);
+            // startplay(round,epoch,ctx);
             // assert!(getcurrent(epoch) == 1,0); // frist epoch
             test_scenario::return_shared(epoch_val);
             test_scenario::return_shared(rounds_val);
@@ -392,11 +424,16 @@ module suiprediction::prediction {
 }
 
 
-//   - ID: 0xe88e990f1735dfdc241dbb317d871922daa9f78e42d264cbe1ec9aa4793ccd7c ,  rounds
-//   - ID: 0xfd4c3da227b886abba9ddbf82eef2d72f248f0f1c8b572d3d735dfc51fb1ece8 ,  Immutable
-//   - ID: 0xad3b80dae522ed6cc545f8548b72bc5569551856c4d93fbd222a0c9f20acdf10 ,  epoch
+//0xada290ec3968f0aaae5f8b42f29958ac290b1e185e54e29d6b765d7ede2ba819
+// rounds
+//0xabcd4d0ce0d0372e3f53db060968fc9f7c8618bbe0c0058693115f8242c733ac
+//prediction
+//0x940b391e818c2b02525128dc90f2e7e7bd9193820edac9987a4e60b5a5c4e6d6
+//epoch
 
-// 0.24
-// up 0.05 down 0.1
-// up 0.1
+
+//           exec()            exec()
+//               current(lock)      can bet
+//  epoch = 2 |   epoch = 3     | epoch = 4   | epoch = 5
+//  round = 2 |   round = 3     | round = 4   | round = 5
 
