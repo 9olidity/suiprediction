@@ -211,8 +211,9 @@ module suiprediction::prediction {
         assert!(round.oracleCalled,0);//
         if(round.upordown) {// up wins
             let to = &mut round.totalAmount;
+            let totalamount  = balance::value(to);
             let userinput = *table::borrow(&round.upaddress,tx_context::sender(ctx));
-            let reward = ((userinput / round.upamount) * round.downamount) + userinput;
+            let reward = ((userinput / round.upamount) * totalamount);
             let rewardcoin = coin::take(to, reward, ctx);
             transfer::public_transfer(rewardcoin, tx_context::sender(ctx));
             // debug::print(&reward);
@@ -228,8 +229,9 @@ module suiprediction::prediction {
             // debug::print(&vector::length(&round.upaddress));
         }else{
             let to = &mut round.totalAmount;
+            let totalamount  = balance::value(to);
             let userinput = *table::borrow(&round.downaddress,tx_context::sender(ctx));
-            let reward = ((userinput / round.downamount) * round.upamount) + userinput;
+            let reward = ((userinput / round.downamount) * totalamount);
             let rewardcoin = coin::take(to, reward, ctx);
             transfer::public_transfer(rewardcoin, tx_context::sender(ctx));
             // debug::print(&reward);
@@ -424,11 +426,11 @@ module suiprediction::prediction {
 }
 
 
-//0x7801944043f7d4c48880ecef64f7da4f1293581cf8c5a7feae51ae8bde481492
+//0xada290ec3968f0aaae5f8b42f29958ac290b1e185e54e29d6b765d7ede2ba819
 // rounds
-//0xf6918409c0231abe9f65c49842144060a806d28e4da8d2b01f19f60997d8141c
+//0xabcd4d0ce0d0372e3f53db060968fc9f7c8618bbe0c0058693115f8242c733ac
 //prediction
-//0x00d040abe28dfbb87e64d2e4cb58ca8018c129f9ca8db9969ee35ddc0e01b326
+//0x940b391e818c2b02525128dc90f2e7e7bd9193820edac9987a4e60b5a5c4e6d6
 //epoch
 
 
