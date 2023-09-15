@@ -207,44 +207,40 @@ module suiprediction::prediction {
         ctx: &mut TxContext
     ){
         let round = vector::borrow_mut(&mut rounds.rounds,playnum);
-        // assert!(epoch.currentEpoch == playnum,0);
         assert!(round.oracleCalled,0);//
         if(round.upordown) {// up wins
             let to = &mut round.totalAmount;
-            let totalamount  = balance::value(to);
             let userinput = *table::borrow(&round.upaddress,tx_context::sender(ctx));
-            let reward = (userinput * (10000000000 as u256 ) * (totalamount as u256)   / round.upamount  / 10000000000);
+            let reward = (userinput * round.downamount * 95   / round.upamount ) / 100 + userinput;
             let rewardcoin = coin::take(to, (reward as u64), ctx);
             transfer::public_transfer(rewardcoin, tx_context::sender(ctx));
-            // debug::print(&reward);
-            // debug::print(&vector::length(&round.upaddress));
-            // let (success,i) = vector::index_of(&round.upaddress,&tx_context::sender(ctx));
-            // if(success){
-            // vector::remove(&mut round.upaddress,i);
-            // };
             let success = table::contains<address, u256>(&round.upaddress,tx_context::sender(ctx));
             if (success) {
                 table::remove(&mut round.upaddress,tx_context::sender(ctx));
             }
-            // debug::print(&vector::length(&round.upaddress));
         }else{
             let to = &mut round.totalAmount;
-            let totalamount  = balance::value(to);
             let userinput = *table::borrow(&round.downaddress,tx_context::sender(ctx));
-            let reward = (userinput * (10000000000 as u256 ) * (totalamount as u256)   / round.downamount  / 10000000000);
+            let reward = (userinput * round.upamount * 95  / round.downamount ) / 100 + userinput;
             let rewardcoin = coin::take(to, (reward as u64), ctx);
             transfer::public_transfer(rewardcoin, tx_context::sender(ctx));
-            // debug::print(&reward);
-            // debug::print(&vector::length(&round.upaddress));
-            // let (success,i) = vector::index_of(&round.upaddress,&tx_context::sender(ctx));
-            // if(success){
-            // vector::remove(&mut round.upaddress,i);
-            // };
+
             let success = table::contains<address, u256>(&round.downaddress,tx_context::sender(ctx));
             if (success) {
                 table::remove(&mut round.downaddress,tx_context::sender(ctx));
             }
         }
+    }
+    public entry fun adminwithdraw(
+        rounds: &mut Rounds,
+        playnum: u256,
+        ctx: &mut TxContext
+    ) {
+        let round = vector::borrow_mut(&mut rounds.rounds,(playnum as u64));
+        let reward = balance::value(&mut round.totalAmount);
+        let to = &mut round.totalAmount;
+        let rewardcoin = coin::take(to, reward, ctx);
+        transfer::public_transfer(rewardcoin, tx_context::sender(ctx));
     }
     // public entry fun getcurrent(epoch: &mut Epoch): u32 {
     //     epoch.currentEpoch
@@ -265,17 +261,7 @@ module suiprediction::prediction {
     //     // balance::value(&round.upAmount) + balance::value(&round.downAmount)
     // }
 
-    // public entry fun adminwithdraw(
-    //     rounds: &mut Rounds,
-    //     playnum: u256,
-    //     ctx: &mut TxContext
-    // ) {
-    //     let round = vector::borrow_mut(&mut rounds.rounds,playnum);
-    //     let to = &mut round.totalAmount;
-    //     let reward = balance::value(&mut round.totalAmount);
-    //     let rewardcoin = coin::take(to, reward, ctx);
-    //     transfer::public_transfer(rewardcoin, tx_context::sender(ctx));
-    // }
+
 
 
     #[test_only]
@@ -288,152 +274,156 @@ module suiprediction::prediction {
     use sui::table::{Table, add};
     use sui::table;
 
-    // #[test]
-    // fun testpaly() {
-    //     let owner = @0x99;
-    //     let user1 = @0x991;
-    //     let user2 = @0x992;
-    //     let user3 = @0x993;
-    //
-    //     let scenario_val = test_scenario::begin(owner);
-    //     let scenario = &mut scenario_val;
-    //
-    //     test_scenario::next_tx(scenario,owner);
-    //     {
-    //         init(test_scenario::ctx(scenario))
-    //     };
-    //
-    //     test_scenario::next_tx(scenario,owner);
-    //     {
-    //         let rounds_val = test_scenario::take_shared<Rounds>(scenario);
-    //         let round = &mut rounds_val;
-    //
-    //         let epoch_val = test_scenario::take_shared<Epoch>(scenario);
-    //         let epoch = &mut epoch_val;
-    //         let ctx = test_scenario::ctx(scenario);
-    //         // startplay(round,epoch,ctx);
-    //         // assert!(getcurrent(epoch) == 1,0); // frist epoch
-    //         test_scenario::return_shared(epoch_val);
-    //         test_scenario::return_shared(rounds_val);
-    //     };
-    //
-    //     // test betup
-    //     test_scenario::next_tx(scenario,user1);
-    //     {
-    //         let epoch_val = test_scenario::take_shared<Epoch>(scenario);
-    //         let epoch = &mut epoch_val;
-    //         let rounds_val = test_scenario::take_shared<Rounds>(scenario);
-    //         let rounds = &mut rounds_val;
-    //         let ctx = test_scenario::ctx(scenario);
-    //         betUp(
-    //             rounds,
-    //             epoch,
-    //             coin::mint_for_testing<SUI>(10, ctx),
-    //             0,
-    //             ctx
-    //         );
-    //         assert!(getupAmount(rounds,0) == 10,0);
-    //         test_scenario::return_shared(rounds_val);
-    //         test_scenario::return_shared(epoch_val);
-    //     };
-    //
-    //
-    //     // test betDown
-    //     test_scenario::next_tx(scenario,user2);
-    //     {
-    //         let epoch_val = test_scenario::take_shared<Epoch>(scenario);
-    //         let epoch = &mut epoch_val;
-    //         let rounds_val = test_scenario::take_shared<Rounds>(scenario);
-    //         let rounds = &mut rounds_val;
-    //         let ctx = test_scenario::ctx(scenario);
-    //         betDown(
-    //             rounds,
-    //             epoch,
-    //             coin::mint_for_testing<SUI>(10, ctx),
-    //             0,
-    //             ctx
-    //         );
-    //         assert!(getdownAmount(rounds,0) == 10,0);
-    //         assert!(gettotalAmount(rounds,0) == 20,0);// up + down = 20
-    //         test_scenario::return_shared(rounds_val);
-    //         test_scenario::return_shared(epoch_val);
-    //     };
-    //
-    //     // up
-    //     test_scenario::next_tx(scenario,user3);
-    //     {
-    //         let epoch_val = test_scenario::take_shared<Epoch>(scenario);
-    //         let epoch = &mut epoch_val;
-    //         let rounds_val = test_scenario::take_shared<Rounds>(scenario);
-    //         let rounds = &mut rounds_val;
-    //         let ctx = test_scenario::ctx(scenario);
-    //         betUp(
-    //             rounds,
-    //             epoch,
-    //             coin::mint_for_testing<SUI>(10, ctx),
-    //             0,
-    //             ctx
-    //         );
-    //         assert!(getupAmount(rounds,0) == 20,0);
-    //         test_scenario::return_shared(rounds_val);
-    //         test_scenario::return_shared(epoch_val);
-    //     };
-    //
-    //     // In the first case, the bulls win
-    //     //The administrator ends the current round and starts the next round
-    //     test_scenario::next_tx(scenario,owner);
-    //     {
-    //         let epoch_val = test_scenario::take_shared<Epoch>(scenario);
-    //         let epoch = &mut epoch_val;
-    //         let rounds_val = test_scenario::take_shared<Rounds>(scenario);
-    //         let rounds = &mut rounds_val;
-    //         let ctx = test_scenario::ctx(scenario);
-    //
-    //         // executeRound(rounds,0,epoch,ctx);
-    //         assert!(getdownAmount(rounds,1) == 0,0);
-    //
-    //         test_scenario::return_shared(rounds_val);
-    //         test_scenario::return_shared(epoch_val);
-    //     };
-    //
-    //
-    //     //Receive award
-    //     test_scenario::next_tx(scenario,user1);
-    //     {
-    //         let epoch_val = test_scenario::take_shared<Epoch>(scenario);
-    //         let epoch = &mut epoch_val;
-    //         let rounds_val = test_scenario::take_shared<Rounds>(scenario);
-    //         let rounds = &mut rounds_val;
-    //
-    //         claim(rounds,0,epoch,test_scenario::ctx(scenario));
-    //
-    //         test_scenario::return_shared(rounds_val);
-    //         test_scenario::return_shared(epoch_val);
-    //     };
-    //
-    //     // test epoch.currentEpoch + 1
-    //     // test_scenario::next_tx(scenario,owner);
-    //     // {
-    //     //     let epoch_val = test_scenario::take_shared<Epoch>(scenario);
-    //     //     let epoch = &mut epoch_val;
-    //     //     exe(epoch);
-    //     //     assert!(getcurrent(epoch) == 2,0); // second epoch
-    //     //     test_scenario::return_shared(epoch_val);
-    //     // };
-    //
-    //     test_scenario::end(scenario_val);
-    // }
+    #[test]
+    fun testpaly() {
+        let owner = @0x99;
+        let user1 = @0x991;
+        let user2 = @0x992;
+        let user3 = @0x993;
+
+        let scenario_val = test_scenario::begin(owner);
+        let scenario = &mut scenario_val;
+
+        test_scenario::next_tx(scenario,owner);
+        {
+            init(test_scenario::ctx(scenario))
+        };
+
+        test_scenario::next_tx(scenario,owner);
+        {
+            let rounds_val = test_scenario::take_shared<Rounds>(scenario);
+            let round = &mut rounds_val;
+
+            let epoch_val = test_scenario::take_shared<Epoch>(scenario);
+            let epoch = &mut epoch_val;
+            let ctx = test_scenario::ctx(scenario);
+            // startplay(round,epoch,ctx);
+            // assert!(getcurrent(epoch) == 1,0); // frist epoch
+            test_scenario::return_shared(epoch_val);
+            test_scenario::return_shared(rounds_val);
+        };
+
+        // test betup
+        test_scenario::next_tx(scenario,user1);
+        {
+            let epoch_val = test_scenario::take_shared<Epoch>(scenario);
+            let epoch = &mut epoch_val;
+            let rounds_val = test_scenario::take_shared<Rounds>(scenario);
+            let rounds = &mut rounds_val;
+            let ctx = test_scenario::ctx(scenario);
+            betUp(
+                rounds,
+                epoch,
+                coin::mint_for_testing<SUI>(10, ctx),
+                0,
+                ctx
+            );
+            // assert!(getupAmount(rounds,0) == 10,0);
+            test_scenario::return_shared(rounds_val);
+            test_scenario::return_shared(epoch_val);
+        };
+
+
+        // test betDown
+        test_scenario::next_tx(scenario,user2);
+        {
+            let epoch_val = test_scenario::take_shared<Epoch>(scenario);
+            let epoch = &mut epoch_val;
+            let rounds_val = test_scenario::take_shared<Rounds>(scenario);
+            let rounds = &mut rounds_val;
+            let ctx = test_scenario::ctx(scenario);
+            betDown(
+                rounds,
+                epoch,
+                coin::mint_for_testing<SUI>(10, ctx),
+                0,
+                ctx
+            );
+            // assert!(getdownAmount(rounds,0) == 10,0);
+            // assert!(gettotalAmount(rounds,0) == 20,0);// up + down = 20
+            test_scenario::return_shared(rounds_val);
+            test_scenario::return_shared(epoch_val);
+        };
+
+        // up
+        test_scenario::next_tx(scenario,user3);
+        {
+            let epoch_val = test_scenario::take_shared<Epoch>(scenario);
+            let epoch = &mut epoch_val;
+            let rounds_val = test_scenario::take_shared<Rounds>(scenario);
+            let rounds = &mut rounds_val;
+            let ctx = test_scenario::ctx(scenario);
+            betUp(
+                rounds,
+                epoch,
+                coin::mint_for_testing<SUI>(10, ctx),
+                0,
+                ctx
+            );
+            // assert!(getupAmount(rounds,0) == 20,0);
+            test_scenario::return_shared(rounds_val);
+            test_scenario::return_shared(epoch_val);
+        };
+
+        // In the first case, the bulls win
+        //The administrator ends the current round and starts the next round
+        test_scenario::next_tx(scenario,owner);
+        {
+            let epoch_val = test_scenario::take_shared<Epoch>(scenario);
+            let epoch = &mut epoch_val;
+            let rounds_val = test_scenario::take_shared<Rounds>(scenario);
+            let rounds = &mut rounds_val;
+            let ctx = test_scenario::ctx(scenario);
+
+            // executeRound(rounds,0,epoch,ctx);
+            // assert!(getdownAmount(rounds,1) == 0,0);
+            // executeRoundfortest(rounds,0,epoch,ctx);
+            // executeRoundfortest(rounds,1,epoch,ctx);
+
+            test_scenario::return_shared(rounds_val);
+            test_scenario::return_shared(epoch_val);
+        };
+
+
+        //Receive award
+        test_scenario::next_tx(scenario,user1);
+        {
+            let epoch_val = test_scenario::take_shared<Epoch>(scenario);
+            let epoch = &mut epoch_val;
+            let rounds_val = test_scenario::take_shared<Rounds>(scenario);
+            let rounds = &mut rounds_val;
+
+            claim(rounds,1,epoch,test_scenario::ctx(scenario));
+
+            test_scenario::return_shared(rounds_val);
+            test_scenario::return_shared(epoch_val);
+        };
+
+        // test epoch.currentEpoch + 1
+        // test_scenario::next_tx(scenario,owner);
+        // {
+        //     let epoch_val = test_scenario::take_shared<Epoch>(scenario);
+        //     let epoch = &mut epoch_val;
+        //     exe(epoch);
+        //     assert!(getcurrent(epoch) == 2,0); // second epoch
+        //     test_scenario::return_shared(epoch_val);
+        // };
+
+        test_scenario::end(scenario_val);
+    }
 
 
 }
 
 
-// 0xe8e24d544bd3d0986d8665535e06e03077a6047ac45bf87eff22c9454b430379
+// 0x95a6d8e8bc01d13fbae05e7383af760ba16369afee18ac99e992c682d254cbcb
 // rounds
-// 0x73884803a7fd3027500d9530d1662a2185a488ad056b06a6d18c2b036a7924f4
+// 0xd419bd4eb57a5941c8996a5f27d5601bce3cce592c09ceccbc98f15a519468b1
 //prediction
-// 0xe3545431ce5040933fdfc30f088c01cf2ceb0233bf6e3c93528be65d810027af
+// 0xc794b130aa5410bb768a3cd7ab0f4219018844479acf04409ef20bab7fd106fb
 //epoch
+// orcel
+// 0xaa0315f0748c1f24ddb2b45f7939cff40f7a8104af5ccbc4a1d32f870c0b4105
 
 
 //           exec()            exec()
