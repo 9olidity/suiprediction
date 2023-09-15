@@ -211,9 +211,10 @@ module suiprediction::prediction {
         assert!(round.oracleCalled,0);//
         if(round.upordown) {// up wins
             let to = &mut round.totalAmount;
-            let totalamount  = balance::value(to);
+            // let totalamount  = balance::value(to);
             let userinput = *table::borrow(&round.upaddress,tx_context::sender(ctx));
-            let reward = (userinput * (10000000000 as u256 ) * (totalamount as u256)   / round.upamount  / 10000000000);
+            // let reward = (userinput * (10000000000 as u256 ) * (totalamount as u256)   / round.upamount  / 10000000000);
+            let reward = (userinput * round.upamount   / round.downamount ) + userinput;
             let rewardcoin = coin::take(to, (reward as u64), ctx);
             transfer::public_transfer(rewardcoin, tx_context::sender(ctx));
             // debug::print(&reward);
@@ -229,9 +230,10 @@ module suiprediction::prediction {
             // debug::print(&vector::length(&round.upaddress));
         }else{
             let to = &mut round.totalAmount;
-            let totalamount  = balance::value(to);
+            // let totalamount  = balance::value(to);
             let userinput = *table::borrow(&round.downaddress,tx_context::sender(ctx));
-            let reward = (userinput * (10000000000 as u256 ) * (totalamount as u256)   / round.downamount  / 10000000000);
+            // let reward = (userinput * (10000000000 as u256 ) * (totalamount as u256)   / round.downamount  / 10000000000);
+            let reward = (userinput * round.downamount   / round.upamount ) + userinput;
             let rewardcoin = coin::take(to, (reward as u64), ctx);
             transfer::public_transfer(rewardcoin, tx_context::sender(ctx));
             // debug::print(&reward);
@@ -428,11 +430,11 @@ module suiprediction::prediction {
 }
 
 
-// 0xe8e24d544bd3d0986d8665535e06e03077a6047ac45bf87eff22c9454b430379
+// 0x8a71866ca3af7c2678c94e07683a9028b9c3901382b1f16a79c85527cb04d261
 // rounds
-// 0x73884803a7fd3027500d9530d1662a2185a488ad056b06a6d18c2b036a7924f4
+// 0xe430d737ab29e6e449d4dd675c9d2dd561d85f950062d491aa4acfa7c8192069
 //prediction
-// 0xe3545431ce5040933fdfc30f088c01cf2ceb0233bf6e3c93528be65d810027af
+// 0x796f6579a567a52d53bf0259f28d52a40ec172f8c834a9354c47bee5acb06242
 //epoch
 
 
