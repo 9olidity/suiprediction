@@ -32,6 +32,23 @@ module suiprediction::prediction {
         upordown: bool
     }
 
+    struct PredictionType has store {
+        name: String,
+        description: String,
+    }
+    struct PredictionResult has store {
+        value: u32,
+        confidence: u32,
+    }
+    struct UserOptions has key ,store {
+        id: UID,
+        prediction_type: PredictionType,
+        prediction_round: u32,
+        prediction_result: PredictionResult,
+        start_time: u64,
+        end_time: u64
+    }
+
     struct BetInfo has store {
         amount: u128,
         claimed: bool
@@ -273,6 +290,7 @@ module suiprediction::prediction {
     use std::debug;
     use sui::table::{Table, add};
     use sui::table;
+    use std::ascii::String;
 
     #[test]
     fun testpaly() {
